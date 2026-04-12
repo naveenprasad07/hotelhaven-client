@@ -78,15 +78,30 @@ export default function HotelForm({ initialData, onSubmit, isLoading, submitLabe
     processFile(e.dataTransfer.files[0]);
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const errs = validate(form);
-    if (Object.keys(errs).length) { setErrors(errs); return; }
-    const fd = new FormData();
-    Object.entries(form).forEach(([k, v]) => fd.append(k, v));
-    if (image) fd.append('image', image);
-    onSubmit(fd);
-  };
+ const handleSubmit = async (e) => {
+  e.preventDefault();
+  const errs = validate(form);
+  if (Object.keys(errs).length) { setErrors(errs); return; }
+
+  const fd = new FormData();
+  Object.entries(form).forEach(([k, v]) => fd.append(k, v));
+
+  // If there's a new image, upload to Cloudinary first
+  if (image) {
+    const cloudData = new FormData();
+    cloudData.append('file', image);
+    cloudData.append('upload_preset', import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET);
+
+    const res = await fetch(
+      `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/upload`,
+      { method: 'POST', body: cloudData }
+    );
+    const data = await res.json();
+    fd.append('image_url', data.secure_url); // send URL not the file
+  }
+
+  onSubmit(fd);
+};
 
   const removeImage = () => {
     setImage(null);
