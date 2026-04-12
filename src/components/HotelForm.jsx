@@ -3,11 +3,11 @@ import { motion } from 'framer-motion';
 import { getImageUrl } from '../api/hotelApi';
 
 const FIELD_CONFIG = [
-  { name: 'title',       label: 'Hotel Name',           type: 'text',   placeholder: 'e.g. Grand Celestial Resort', hint: 'min. 3 characters' },
+  { name: 'title',       label: 'Hotel Name',           type: 'text',     placeholder: 'e.g. Grand Celestial Resort', hint: 'min. 3 characters' },
   { name: 'description', label: 'Description',           type: 'textarea', placeholder: 'Describe the hotel, amenities, unique features…', hint: 'min. 10 characters' },
-  { name: 'latitude',    label: 'Latitude',              type: 'number', placeholder: '48.8566',  hint: '-90 to 90' },
-  { name: 'longitude',   label: 'Longitude',             type: 'number', placeholder: '2.3522',   hint: '-180 to 180' },
-  { name: 'price',       label: 'Price per Night (USD)', type: 'number', placeholder: '299.00',   hint: 'USD, ≥ 0', prefix: '$' },
+  { name: 'latitude',    label: 'Latitude',              type: 'number',   placeholder: '48.8566',  hint: '-90 to 90' },
+  { name: 'longitude',   label: 'Longitude',             type: 'number',   placeholder: '2.3522',   hint: '-180 to 180' },
+  { name: 'price',       label: 'Price per Night (USD)', type: 'number',   placeholder: '299.00',   hint: 'USD, ≥ 0', prefix: '$' },
 ];
 
 function validate(form) {
@@ -29,11 +29,12 @@ function validate(form) {
 }
 
 export default function HotelForm({ initialData, onSubmit, isLoading, submitLabel = 'Save Hotel' }) {
-  const [form, setForm] = useState({ title: '', description: '', latitude: '', longitude: '', price: '' });
-  const [image,        setImage]        = useState(null);
-  const [preview,      setPreview]      = useState(null);
-  const [errors,       setErrors]       = useState({});
-  const [dragOver,     setDragOver]     = useState(false);
+  const [form, setForm]       = useState({ title: '', description: '', latitude: '', longitude: '', price: '' });
+  const [image, setImage]     = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [errors, setErrors]   = useState({});
+  const [dragOver, setDragOver]           = useState(false);
+  const [uploading, setUploading]         = useState(false); // tracks Cloudinary upload separately
   const fileRef = useRef(null);
 
   useEffect(() => {
@@ -61,8 +62,8 @@ export default function HotelForm({ initialData, onSubmit, isLoading, submitLabe
       setErrors((p) => ({ ...p, image: 'Please select a valid image file (JPEG, PNG, WebP, GIF).' }));
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      setErrors((p) => ({ ...p, image: 'Image must be smaller than 5 MB.' }));
+    if (file.size > 20 * 1024 * 1024) {
+      setErrors((p) => ({ ...p, image: 'Image must be smaller than 20 MB.' }));
       return;
     }
     setImage(file);
@@ -78,36 +79,65 @@ export default function HotelForm({ initialData, onSubmit, isLoading, submitLabe
     processFile(e.dataTransfer.files[0]);
   };
 
- const handleSubmit = async (e) => {
-  e.preventDefault();
-  const errs = validate(form);
-  if (Object.keys(errs).length) { setErrors(errs); return; }
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const errs = validate(form);
+    if (Object.keys(errs).length) { setErrors(errs); return; }
 
-  const fd = new FormData();
-  Object.entries(form).forEach(([k, v]) => fd.append(k, v));
+    const fd = new FormData();
+    Object.entries(form).forEach(([k, v]) => fd.append(k, v));
 
-  // If there's a new image, upload to Cloudinary first
-  if (image) {
-    const cloudData = new FormData();
-    cloudData.append('file', image);
-    cloudData.append('upload_preset', import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET);
+    // Upload image directly to Cloudinary from the browser
+    if (image) {
+      const cloudName   = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+      const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 
-    const res = await fetch(
-      `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/upload`,
-      { method: 'POST', body: cloudData }
-    );
-    const data = await res.json();
-    fd.append('image_url', data.secure_url); // send URL not the file
-  }
+      // Guard: if env vars are missing, stop and show a clear error
+      if (!cloudName || !uploadPreset) {
+        setErrors((p) => ({ ...p, image: 'Cloudinary is not configured. Check VITE_CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_UPLOAD_PRESET env vars.' }));
+        return;
+      }
 
-  onSubmit(fd);
-};
+      try {
+        setUploading(true);
+        const cloudData = new FormData();
+        cloudData.append('file', image);
+        cloudData.append('upload_preset', uploadPreset);
+
+        const res = await fetch(
+          `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+          { method: 'POST', body: cloudData }
+        );
+
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData?.error?.message || `Cloudinary error ${res.status}`);
+        }
+
+        const data = await res.json();
+
+        if (!data.secure_url) throw new Error('No URL returned from Cloudinary.');
+
+        fd.append('image_url', data.secure_url); // send full Cloudinary URL to backend
+      } catch (err) {
+        setErrors((p) => ({ ...p, image: `Image upload failed: ${err.message}` }));
+        setUploading(false);
+        return; // stop — don't submit with a broken image
+      } finally {
+        setUploading(false);
+      }
+    }
+
+    onSubmit(fd);
+  };
 
   const removeImage = () => {
     setImage(null);
     setPreview(null);
     if (fileRef.current) fileRef.current.value = '';
   };
+
+  const isBusy = isLoading || uploading;
 
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-6">
@@ -155,7 +185,7 @@ export default function HotelForm({ initialData, onSubmit, isLoading, submitLabe
             <p className="text-sm font-medium text-black/55">
               Drop image here or <span className="text-black underline">browse</span>
             </p>
-            <p className="text-xs text-black/30 mt-1">JPEG · PNG · WebP · GIF — max 5 MB</p>
+            <p className="text-xs text-black/30 mt-1">JPEG · PNG · WebP · GIF — max 20 MB</p>
           </div>
         )}
 
@@ -217,14 +247,22 @@ export default function HotelForm({ initialData, onSubmit, isLoading, submitLabe
       {/* ── Submit ──────────────────────────────────────────────── */}
       <motion.button
         type="submit"
-        disabled={isLoading}
-        whileHover={!isLoading ? { scale: 1.01 } : undefined}
-        whileTap={!isLoading  ? { scale: 0.98 } : undefined}
+        disabled={isBusy}
+        whileHover={!isBusy ? { scale: 1.01 } : undefined}
+        whileTap={!isBusy  ? { scale: 0.98 } : undefined}
         className="w-full py-3.5 bg-black text-white rounded-xl font-medium text-sm
                    hover:bg-black/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed
                    flex items-center justify-center gap-2"
       >
-        {isLoading ? (
+        {uploading ? (
+          <>
+            <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            Uploading image…
+          </>
+        ) : isLoading ? (
           <>
             <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
