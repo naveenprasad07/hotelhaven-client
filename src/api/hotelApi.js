@@ -19,19 +19,35 @@ api.interceptors.response.use(
   }
 );
 
+/**
+ * Convert a FormData object to a plain JSON object.
+ * HotelForm builds a FormData (for convenience), but the backend
+ * now expects JSON since multer was removed.
+ */
+function formDataToJson(fd) {
+  const obj = {};
+  for (const [key, value] of fd.entries()) {
+    obj[key] = value;
+  }
+  return obj;
+}
+
 export const hotelApi = {
-  getHotels:    (params)        => api.get('/hotels', { params }),
-  getHotelById: (id)            => api.get(`/hotels/${id}`),
-  createHotel:  (fd)            => api.post('/hotels', fd, { headers: { 'Content-Type': 'multipart/form-data' } }),
-  updateHotel:  (id, fd)        => api.put(`/hotels/${id}`, fd, { headers: { 'Content-Type': 'multipart/form-data' } }),
-  deleteHotel:  (id)            => api.delete(`/hotels/${id}`),
+  getHotels:    (params) => api.get('/hotels', { params }),
+  getHotelById: (id)     => api.get(`/hotels/${id}`),
+
+  // Send as JSON — backend uses express.json(), not multer
+  createHotel: (fd) => api.post('/hotels', formDataToJson(fd)),
+  updateHotel: (id, fd) => api.put(`/hotels/${id}`, formDataToJson(fd)),
+
+  deleteHotel: (id) => api.delete(`/hotels/${id}`),
 };
 
-/** Resolve a DB image_url (e.g. "/uploads/hotel-123.jpg") to a full URL. */
+/** Resolve a DB image_url (Cloudinary https:// URL) to display. */
 export const getImageUrl = (imageUrl) => {
   if (!imageUrl) return null;
-  if (imageUrl.startsWith('http')) return imageUrl;
-  return `${BASE_URL}${imageUrl}`;
+  if (imageUrl.startsWith('http')) return imageUrl;   // Cloudinary URL — use as-is
+  return `${BASE_URL}${imageUrl}`;                    // legacy local path fallback
 };
 
 export default api;
