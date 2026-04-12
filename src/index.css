@@ -1,0 +1,99 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Root variables ─────────────────────────────────────────────────────────── */
+:root {
+  --cream:    #FFFDF2;
+  --ink:      #0A0A0A;
+  --ink-60:   rgba(10,10,10,0.6);
+  --ink-20:   rgba(10,10,10,0.2);
+  --ink-08:   rgba(10,10,10,0.08);
+  --gold:     #C9A84C;
+  --red:      #E63946;
+}
+
+/* ── Base ────────────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background-color: var(--cream);
+  color: var(--ink);
+  font-family: 'DM Sans', system-ui, sans-serif;
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Typography helpers ──────────────────────────────────────────────────────── */
+.font-display { font-family: 'DM Serif Display', Georgia, serif; }
+.font-mono    { font-family: 'DM Mono', monospace; }
+
+/* ── Scrollbar ───────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar       { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--ink-20); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--ink-60); }
+
+/* ── Leaflet map ─────────────────────────────────────────────────────────────── */
+.leaflet-container {
+  height: 420px;
+  width: 100%;
+  border-radius: 1rem;
+  z-index: 1;
+  font-family: 'DM Sans', sans-serif;
+}
+.leaflet-popup-content-wrapper {
+  border-radius: 0.75rem;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+  font-family: 'DM Sans', sans-serif;
+}
+
+/* ── Toast overrides ────────────────────────────────────────────────────────── */
+.Toastify__toast           { border-radius: 0.75rem !important; font-family: 'DM Sans', sans-serif !important; }
+.Toastify__toast--success  { border-left: 3px solid #22c55e; }
+.Toastify__toast--error    { border-left: 3px solid var(--red); }
+
+/* ── Utility: line-clamp ─────────────────────────────────────────────────────── */
+.line-clamp-1 { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; }
+.line-clamp-2 { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.line-clamp-3 { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+
+/* ── Hotel card hover ────────────────────────────────────────────────────────── */
+.hotel-card { transition: transform 0.25s ease, box-shadow 0.25s ease; }
+.hotel-card:hover { transform: translateY(-6px); box-shadow: 0 20px 48px rgba(0,0,0,0.12); }
+
+/* ── Form focus ring ─────────────────────────────────────────────────────────── */
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  ring: 2px;
+}
+
+/* ── Image drag-over highlight ───────────────────────────────────────────────── */
+.drop-zone-active {
+  border-color: var(--ink) !important;
+  background-color: rgba(10,10,10,0.04);
+}
+
+/* ── Skeleton shimmer ────────────────────────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.skeleton-shimmer {
+  background: linear-gradient(90deg, #e8e5d9 25%, #f5f2e7 50%, #e8e5d9 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.6s infinite;
+}
+
+/* ── Page entrance ───────────────────────────────────────────────────────────── */
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.page-enter { animation: pageIn 0.35s ease forwards; }
+
+/* ── No-select ───────────────────────────────────────────────────────────────── */
+.no-select { user-select: none; -webkit-user-select: none; }
