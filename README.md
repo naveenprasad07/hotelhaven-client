@@ -49,7 +49,6 @@ Key design goals:
 | Image Upload | Cloudinary (browser-side unsigned upload) |
 | Notifications | React Toastify |
 | SEO | React Helmet Async |
-
 ---
 
 ## Features
