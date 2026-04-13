@@ -243,13 +243,6 @@ The `vercel.json` in the repo configures all routes to serve `index.html`, which
 3. Add a `_redirects` file in `public/`: `/* /index.html 200`
 4. Set environment variables in Netlify dashboard
 
----
-
-## Contributing
-
-Pull requests are welcome. For major changes, please open an issue first to discuss what you'd like to change.
-
----
 
 ## License
 
